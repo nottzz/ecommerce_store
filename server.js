@@ -1233,10 +1233,14 @@ app.get('/', (req, res) => {
           cartCount = 0;
           document.getElementById('cartCount').textContent = '0';
           alert(\`✅ Order placed successfully!\\nOrder ID: \${data.order.id.substr(0, 8)}\\nTracking: \${data.order.trackingNumber}\`);
+          loadOrders();
           showPage('orders');
+        } else {
+          alert('❌ Checkout failed: ' + (data.error || 'Unknown error'));
         }
       } catch (err) {
-        alert('Error: ' + err.message);
+        console.error('Checkout error:', err);
+        alert('Error during checkout: ' + err.message);
       }
     }
 
