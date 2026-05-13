@@ -40,6 +40,7 @@ const products = [
 const users = new Map();
 const carts = new Map();
 const sessions = new Map();
+const orders = new Map();
 
 // Health check
 app.get('/health', (req, res) => {
@@ -75,6 +76,7 @@ app.post('/api/auth/signup', (req, res) => {
   
   users.set(userId, { id: userId, email, password, name });
   carts.set(userId, []);
+  orders.set(userId, []);
   sessions.set(sessionId, userId);
   
   res.json({ 
@@ -161,6 +163,63 @@ app.get('/api/cart/:userId', (req, res) => {
   res.json(items);
 });
 
+// Checkout (create order)
+app.post('/api/checkout/:userId', (req, res) => {
+  const userId = req.params.userId;
+  const cart = carts.get(userId) || [];
+  
+  if (cart.length === 0) {
+    return res.status(400).json({ error: 'Cart is empty' });
+  }
+  
+  const orderItems = cart.map(item => {
+    const product = products.find(p => p.id === item.productId);
+    return {
+      productId: item.productId,
+      productName: product.name,
+      quantity: item.quantity,
+      price: product.price,
+      subtotal: product.price * item.quantity
+    };
+  });
+  
+  const total = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
+  
+  const order = {
+    id: uuidv4(),
+    userId,
+    items: orderItems,
+    total,
+    status: 'completed',
+    date: new Date().toISOString(),
+    trackingNumber: 'TRK-' + Math.random().toString(36).substr(2, 9).toUpperCase()
+  };
+  
+  if (!orders.has(userId)) {
+    orders.set(userId, []);
+  }
+  
+  orders.get(userId).push(order);
+  carts.set(userId, []);
+  
+  res.json({ success: true, order });
+});
+
+// Get user orders
+app.get('/api/orders/:userId', (req, res) => {
+  const userId = req.params.userId;
+  const userOrders = orders.get(userId) || [];
+  res.json(userOrders);
+});
+
+// Get single order
+app.get('/api/orders/:userId/:orderId', (req, res) => {
+  const { userId, orderId } = req.params;
+  const userOrders = orders.get(userId) || [];
+  const order = userOrders.find(o => o.id === orderId);
+  res.json(order || { error: 'Order not found' });
+});
+
 // Main page
 app.get('/', (req, res) => {
   res.send(`
@@ -176,12 +235,12 @@ app.get('/', (req, res) => {
     
     header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
     .header-content { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; }
-    .logo { font-size: 28px; font-weight: bold; }
+    .logo { font-size: 28px; font-weight: bold; cursor: pointer; }
     .header-right { display: flex; gap: 15px; align-items: center; }
     .auth-btn { background: white; color: #667eea; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
     .auth-btn:hover { transform: scale(1.05); }
     .user-info { color: white; font-size: 14px; }
-    .cart-badge { background: #ff6b6b; color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+    .cart-badge { background: #ff6b6b; color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; }
     
     .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
     
@@ -213,7 +272,7 @@ app.get('/', (req, res) => {
     
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
     .modal.active { display: flex; }
-    .modal-content { background: white; padding: 40px; border-radius: 12px; max-width: 400px; width: 90%; }
+    .modal-content { background: white; padding: 40px; border-radius: 12px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
     .modal-title { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
     .form-group { margin-bottom: 15px; }
     .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
@@ -225,56 +284,73 @@ app.get('/', (req, res) => {
     .toggle-form { text-align: center; margin-top: 15px; font-size: 14px; }
     .toggle-form a { color: #667eea; cursor: pointer; text-decoration: underline; }
     
+    .order-item { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+    .order-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .order-id { font-weight: bold; color: #667eea; }
+    .order-date { font-size: 12px; color: #718096; }
+    .order-total { font-size: 18px; font-weight: bold; color: #2d3748; }
+    .order-status { display: inline-block; background: #c3fae8; color: #0f5132; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .order-items { font-size: 13px; color: #718096; margin-top: 10px; }
+    
     .cart-icon { position: fixed; bottom: 30px; right: 30px; background: #ff6b6b; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4); transition: all 0.3s; }
     .cart-icon:hover { transform: scale(1.1); }
     .cart-count { position: absolute; top: -5px; right: -5px; background: #fff; color: #ff6b6b; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; }
     
+    .page { display: none; }
+    .page.active { display: block; }
+    
     footer { background: #2d3748; color: white; padding: 40px 20px; text-align: center; margin-top: 60px; }
-    .footer-content { max-width: 1200px; margin: 0 auto; }
-    .footer-links { display: flex; justify-content: center; gap: 30px; margin-bottom: 20px; flex-wrap: wrap; }
-    .footer-links a { color: #cbd5e0; text-decoration: none; transition: color 0.3s; }
-    .footer-links a:hover { color: white; }
   </style>
 </head>
 <body>
   <header>
     <div class="header-content">
-      <div class="logo">🛍️ Premium Tech Store</div>
+      <div class="logo" onclick="showPage('home')">🛍️ Premium Tech Store</div>
       <div class="header-right">
         <div id="userSection" style="display:none;">
           <span class="user-info">👤 <span id="userName"></span></span>
+          <button class="auth-btn" onclick="showPage('orders')">📦 Orders</button>
           <button class="auth-btn" onclick="signOut()">Sign Out</button>
         </div>
         <div id="authSection">
           <button class="auth-btn" onclick="showSignIn()">Sign In</button>
           <button class="auth-btn" onclick="showSignUp()">Sign Up</button>
         </div>
-        <div class="cart-badge">🛒 <span id="cartCount">0</span></div>
+        <div class="cart-badge" onclick="viewCart()">🛒 <span id="cartCount">0</span></div>
       </div>
     </div>
   </header>
 
-  <div class="container">
-    <div class="hero">
-      <h1>Best Tech Products Online</h1>
-      <p>Premium accessories and electronics for your digital lifestyle</p>
-    </div>
+  <!-- Home Page -->
+  <div id="home" class="page active">
+    <div class="container">
+      <div class="hero">
+        <h1>Best Tech Products Online</h1>
+        <p>Premium accessories and electronics for your digital lifestyle</p>
+      </div>
 
-    <div class="filters">
-      <button class="filter-btn active" onclick="filterProducts('all')">All Products</button>
-      <button class="filter-btn" onclick="filterProducts('Audio')">🎧 Audio</button>
-      <button class="filter-btn" onclick="filterProducts('Wearables')">⌚ Wearables</button>
-      <button class="filter-btn" onclick="filterProducts('Input')">⌨️ Input</button>
-      <button class="filter-btn" onclick="filterProducts('Power')">🔋 Power</button>
-      <button class="filter-btn" onclick="filterProducts('Cables')">🔌 Cables</button>
-    </div>
+      <div class="filters">
+        <button class="filter-btn active" onclick="filterProducts('all')">All Products</button>
+        <button class="filter-btn" onclick="filterProducts('Audio')">🎧 Audio</button>
+        <button class="filter-btn" onclick="filterProducts('Wearables')">⌚ Wearables</button>
+        <button class="filter-btn" onclick="filterProducts('Input')">⌨️ Input</button>
+        <button class="filter-btn" onclick="filterProducts('Power')">🔋 Power</button>
+        <button class="filter-btn" onclick="filterProducts('Cables')">🔌 Cables</button>
+      </div>
 
-    <div class="products-grid" id="products"></div>
+      <div class="products-grid" id="products"></div>
+    </div>
   </div>
 
-  <div class="cart-icon" onclick="viewCart()">
-    🛒
-    <div class="cart-count" id="cartBadge">0</div>
+  <!-- Orders Page -->
+  <div id="orders" class="page">
+    <div class="container">
+      <div class="hero">
+        <h1>Your Orders</h1>
+        <p>Track and manage your purchases</p>
+      </div>
+      <div id="ordersList"></div>
+    </div>
   </div>
 
   <!-- Sign In Modal -->
@@ -321,14 +397,13 @@ app.get('/', (req, res) => {
     </div>
   </div>
 
+  <div class="cart-icon" onclick="viewCart()">
+    🛒
+    <div class="cart-count" id="cartBadge">0</div>
+  </div>
+
   <footer>
     <div class="footer-content">
-      <div class="footer-links">
-        <a href="#">About Us</a>
-        <a href="#">Contact</a>
-        <a href="#">Privacy Policy</a>
-        <a href="#">Terms of Service</a>
-      </div>
       <p>&copy; 2026 Premium Tech Store. All rights reserved.</p>
     </div>
   </footer>
@@ -340,7 +415,6 @@ app.get('/', (req, res) => {
     let currentUser = null;
     let currentSessionId = null;
 
-    // Check if user is logged in
     function checkAuth() {
       const sessionId = localStorage.getItem('sessionId');
       const user = localStorage.getItem('user');
@@ -360,6 +434,61 @@ app.get('/', (req, res) => {
       } else {
         document.getElementById('authSection').style.display = 'flex';
         document.getElementById('userSection').style.display = 'none';
+      }
+    }
+
+    function showPage(pageName) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(pageName).classList.add('active');
+      
+      if (pageName === 'orders') {
+        if (!currentUser) {
+          alert('Please sign in first');
+          showSignIn();
+          return;
+        }
+        loadOrders();
+      } else if (pageName === 'home') {
+        loadProducts();
+      }
+    }
+
+    async function loadOrders() {
+      if (!currentUser) return;
+      
+      try {
+        const response = await fetch(\`/api/orders/\${currentUser.id}\`);
+        const userOrders = await response.json();
+        
+        const ordersList = document.getElementById('ordersList');
+        
+        if (userOrders.length === 0) {
+          ordersList.innerHTML = '<p style="text-align: center; color: #718096;">No orders yet. Start shopping!</p>';
+          return;
+        }
+        
+        ordersList.innerHTML = userOrders.map(order => \`
+          <div class="order-item">
+            <div class="order-header">
+              <div>
+                <div class="order-id">Order #\${order.id.substr(0, 8)}</div>
+                <div class="order-date">\${new Date(order.date).toLocaleDateString()}</div>
+              </div>
+              <div style="text-align: right;">
+                <div class="order-status">\${order.status}</div>
+                <div class="order-total">$\${order.total.toFixed(2)}</div>
+              </div>
+            </div>
+            <div class="order-items">
+              <strong>Items:</strong> \${order.items.map(i => \`\${i.productName} (x\${i.quantity})\`).join(', ')}
+            </div>
+            <div class="order-items">
+              <strong>Tracking:</strong> \${order.trackingNumber}
+            </div>
+          </div>
+        \`).join('');
+      } catch (err) {
+        console.error('Error loading orders:', err);
       }
     }
 
@@ -430,6 +559,7 @@ app.get('/', (req, res) => {
       currentUser = null;
       currentSessionId = null;
       updateAuthUI();
+      showPage('home');
       alert('✅ Signed out successfully!');
     }
 
@@ -515,7 +645,31 @@ app.get('/', (req, res) => {
       if (cartCount === 0) {
         alert('Your cart is empty. Add some products first!');
       } else {
-        alert(\`You have \${cartCount} items in your cart. Checkout coming soon!\`);
+        const proceed = confirm(\`You have \${cartCount} items in your cart ($\${(cartCount * 50).toFixed(2)}). Proceed to checkout?\`);
+        if (proceed) {
+          checkout();
+        }
+      }
+    }
+
+    async function checkout() {
+      try {
+        const response = await fetch(\`/api/checkout/\${currentUser.id}\`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          cartCount = 0;
+          document.getElementById('cartCount').textContent = '0';
+          document.getElementById('cartBadge').textContent = '0';
+          alert(\`✅ Order placed successfully!\\nOrder ID: \${data.order.id.substr(0, 8)}\\nTracking: \${data.order.trackingNumber}\`);
+          showPage('orders');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
       }
     }
 
