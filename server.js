@@ -236,10 +236,11 @@ app.get('/', (req, res) => {
     header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
     .header-content { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; }
     .logo { font-size: 28px; font-weight: bold; cursor: pointer; }
-    .header-right { display: flex; gap: 15px; align-items: center; }
-    .auth-btn { background: white; color: #667eea; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
-    .auth-btn:hover { transform: scale(1.05); }
-    .user-info { color: white; font-size: 14px; }
+    .header-right { display: flex; gap: 20px; align-items: center; }
+    .nav-menu { display: flex; gap: 15px; align-items: center; list-style: none; }
+    .nav-item { color: white; cursor: pointer; font-size: 14px; transition: all 0.3s; padding: 8px 12px; border-radius: 6px; }
+    .nav-item:hover { background: rgba(255,255,255,0.2); }
+    .user-info { color: white; font-size: 14px; font-weight: 600; }
     .cart-badge { background: #ff6b6b; color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; }
     
     .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
@@ -307,15 +308,15 @@ app.get('/', (req, res) => {
     <div class="header-content">
       <div class="logo" onclick="showPage('home')">🛍️ Premium Tech Store</div>
       <div class="header-right">
-        <div id="userSection" style="display:none;">
-          <span class="user-info">👤 <span id="userName"></span></span>
-          <button class="auth-btn" onclick="showPage('orders')">📦 Orders</button>
-          <button class="auth-btn" onclick="signOut()">Sign Out</button>
-        </div>
-        <div id="authSection">
-          <button class="auth-btn" onclick="showSignIn()">Sign In</button>
-          <button class="auth-btn" onclick="showSignUp()">Sign Up</button>
-        </div>
+        <ul class="nav-menu">
+          <li id="userSection" style="display:none;">
+            <span class="user-info">👤 <span id="userName"></span></span>
+          </li>
+          <li id="ordersLink" style="display:none;" class="nav-item" onclick="showPage('orders')">📦 Orders</li>
+          <li id="signOutLink" style="display:none;" class="nav-item" onclick="signOut()">Sign Out</li>
+          <li id="signInLink" class="nav-item" onclick="showSignIn()">Sign In</li>
+          <li id="signUpLink" class="nav-item" onclick="showSignUp()">Sign Up</li>
+        </ul>
         <div class="cart-badge" onclick="viewCart()">🛒 <span id="cartCount">0</span></div>
       </div>
     </div>
@@ -428,12 +429,18 @@ app.get('/', (req, res) => {
 
     function updateAuthUI() {
       if (currentUser) {
-        document.getElementById('authSection').style.display = 'none';
-        document.getElementById('userSection').style.display = 'flex';
+        document.getElementById('userSection').style.display = 'block';
+        document.getElementById('ordersLink').style.display = 'block';
+        document.getElementById('signOutLink').style.display = 'block';
+        document.getElementById('signInLink').style.display = 'none';
+        document.getElementById('signUpLink').style.display = 'none';
         document.getElementById('userName').textContent = currentUser.name;
       } else {
-        document.getElementById('authSection').style.display = 'flex';
         document.getElementById('userSection').style.display = 'none';
+        document.getElementById('ordersLink').style.display = 'none';
+        document.getElementById('signOutLink').style.display = 'none';
+        document.getElementById('signInLink').style.display = 'block';
+        document.getElementById('signUpLink').style.display = 'block';
       }
     }
 
