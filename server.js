@@ -11,26 +11,26 @@ app.use(express.urlencoded({ extended: true }));
 
 // In-memory data store
 let products = [
-  { id: uuidv4(), name: 'Wireless Headphones Pro', description: 'Premium noise-cancelling headphones with 30hr battery', price: 199.99, category: 'Audio', image: '🎧' },
-  { id: uuidv4(), name: 'Smart Watch Ultra', description: 'Advanced fitness tracking with AMOLED display', price: 299.99, category: 'Wearables', image: '⌚' },
-  { id: uuidv4(), name: 'USB-C Fast Charger', description: '65W fast charging cable with data transfer', price: 19.99, category: 'Cables', image: '🔌' },
-  { id: uuidv4(), name: 'Premium Phone Case', description: 'Military-grade protective case with MagSafe', price: 29.99, category: 'Protection', image: '📱' },
-  { id: uuidv4(), name: 'Tempered Glass Screen', description: '9H hardness screen protector for all phones', price: 9.99, category: 'Protection', image: '🛡️' },
-  { id: uuidv4(), name: 'Power Bank 20000mAh', description: 'Fast charging portable battery with dual USB-C', price: 49.99, category: 'Power', image: '🔋' },
-  { id: uuidv4(), name: 'Portable Bluetooth Speaker', description: 'Waterproof 360° sound with 12hr battery', price: 79.99, category: 'Audio', image: '🔊' },
-  { id: uuidv4(), name: 'Aluminum Laptop Stand', description: 'Adjustable ergonomic stand for all laptops', price: 39.99, category: 'Accessories', image: '💻' },
-  { id: uuidv4(), name: 'Mechanical Gaming Keyboard', description: 'RGB backlit with Cherry MX switches', price: 129.99, category: 'Input', image: '⌨️' },
-  { id: uuidv4(), name: 'Ergonomic Wireless Mouse', description: 'Precision tracking with 18-month battery', price: 49.99, category: 'Input', image: '🖱️' },
-  { id: uuidv4(), name: '4K USB Webcam', description: '1080p HD with auto-focus and noise cancellation', price: 89.99, category: 'Video', image: '📹' },
-  { id: uuidv4(), name: 'USB Condenser Microphone', description: 'Studio-quality recording with pop filter', price: 99.99, category: 'Audio', image: '🎤' },
-  { id: uuidv4(), name: 'LED Desk Lamp', description: 'Adjustable brightness with USB charging port', price: 34.99, category: 'Lighting', image: '💡' },
-  { id: uuidv4(), name: 'Cable Management Kit', description: 'Organize all your cables with clips and ties', price: 14.99, category: 'Organization', image: '🔗' },
-  { id: uuidv4(), name: 'Phone Mount Stand', description: 'Adjustable 360° rotation for desk or car', price: 19.99, category: 'Mounts', image: '📍' },
-  { id: uuidv4(), name: '4K HDMI 2.1 Cable', description: '8K ready with gold-plated connectors', price: 24.99, category: 'Cables', image: '📺' },
-  { id: uuidv4(), name: 'Cat6 Ethernet Cable', description: '10ft gigabit internet cable for gaming', price: 12.99, category: 'Cables', image: '🌐' },
-  { id: uuidv4(), name: 'Smart Power Strip', description: '4 outlets + 2 USB with app control', price: 44.99, category: 'Power', image: '⚡' },
-  { id: uuidv4(), name: 'Laptop Cooling Pad', description: 'Dual fan system with adjustable height', price: 29.99, category: 'Cooling', image: '❄️' },
-  { id: uuidv4(), name: '27" 4K Monitor', description: 'IPS display with USB-C and speakers', price: 399.99, category: 'Displays', image: '🖥️' }
+  { id: uuidv4(), name: 'Wireless Headphones Pro', description: 'Premium noise-cancelling headphones with 30hr battery', price: 199.99, category: 'Audio', image: '🎧', stock: 45 },
+  { id: uuidv4(), name: 'Smart Watch Ultra', description: 'Advanced fitness tracking with AMOLED display', price: 299.99, category: 'Wearables', image: '⌚', stock: 32 },
+  { id: uuidv4(), name: 'USB-C Fast Charger', description: '65W fast charging cable with data transfer', price: 19.99, category: 'Cables', image: '🔌', stock: 120 },
+  { id: uuidv4(), name: 'Premium Phone Case', description: 'Military-grade protective case with MagSafe', price: 29.99, category: 'Protection', image: '📱', stock: 88 },
+  { id: uuidv4(), name: 'Tempered Glass Screen', description: '9H hardness screen protector for all phones', price: 9.99, category: 'Protection', image: '🛡️', stock: 200 },
+  { id: uuidv4(), name: 'Power Bank 20000mAh', description: 'Fast charging portable battery with dual USB-C', price: 49.99, category: 'Power', image: '🔋', stock: 67 },
+  { id: uuidv4(), name: 'Portable Bluetooth Speaker', description: 'Waterproof 360° sound with 12hr battery', price: 79.99, category: 'Audio', image: '🔊', stock: 43 },
+  { id: uuidv4(), name: 'Aluminum Laptop Stand', description: 'Adjustable ergonomic stand for all laptops', price: 39.99, category: 'Accessories', image: '💻', stock: 55 },
+  { id: uuidv4(), name: 'Mechanical Gaming Keyboard', description: 'RGB backlit with Cherry MX switches', price: 129.99, category: 'Input', image: '⌨️', stock: 28 },
+  { id: uuidv4(), name: 'Ergonomic Wireless Mouse', description: 'Precision tracking with 18-month battery', price: 49.99, category: 'Input', image: '🖱️', stock: 92 },
+  { id: uuidv4(), name: '4K USB Webcam', description: '1080p HD with auto-focus and noise cancellation', price: 89.99, category: 'Video', image: '📹', stock: 35 },
+  { id: uuidv4(), name: 'USB Condenser Microphone', description: 'Studio-quality recording with pop filter', price: 99.99, category: 'Audio', image: '🎤', stock: 24 },
+  { id: uuidv4(), name: 'LED Desk Lamp', description: 'Adjustable brightness with USB charging port', price: 34.99, category: 'Lighting', image: '💡', stock: 71 },
+  { id: uuidv4(), name: 'Cable Management Kit', description: 'Organize all your cables with clips and ties', price: 14.99, category: 'Organization', image: '🔗', stock: 156 },
+  { id: uuidv4(), name: 'Phone Mount Stand', description: 'Adjustable 360° rotation for desk or car', price: 19.99, category: 'Mounts', image: '📍', stock: 103 },
+  { id: uuidv4(), name: '4K HDMI 2.1 Cable', description: '8K ready with gold-plated connectors', price: 24.99, category: 'Cables', image: '📺', stock: 89 },
+  { id: uuidv4(), name: 'Cat6 Ethernet Cable', description: '10ft gigabit internet cable for gaming', price: 12.99, category: 'Cables', image: '🌐', stock: 145 },
+  { id: uuidv4(), name: 'Smart Power Strip', description: '4 outlets + 2 USB with app control', price: 44.99, category: 'Power', image: '⚡', stock: 52 },
+  { id: uuidv4(), name: 'Laptop Cooling Pad', description: 'Dual fan system with adjustable height', price: 29.99, category: 'Cooling', image: '❄️', stock: 38 },
+  { id: uuidv4(), name: '27" 4K Monitor', description: 'IPS display with USB-C and speakers', price: 399.99, category: 'Displays', image: '🖥️', stock: 15 }
 ];
 
 const users = new Map();
@@ -50,6 +50,7 @@ app.get('/api/products', (req, res) => {
   res.json(products);
 });
 
+// Admin endpoints
 app.post('/api/admin/login', (req, res) => {
   const { email, password } = req.body;
   if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
@@ -80,6 +81,151 @@ app.get('/api/admin/stats', (req, res) => {
   });
 });
 
+app.get('/api/admin/products', (req, res) => {
+  const sessionId = req.headers['x-admin-session'];
+  if (!adminSessions.has(sessionId)) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  res.json(products);
+});
+
+app.post('/api/admin/products', (req, res) => {
+  const sessionId = req.headers['x-admin-session'];
+  if (!adminSessions.has(sessionId)) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  const { name, description, price, category, image, stock } = req.body;
+  const newProduct = {
+    id: uuidv4(),
+    name,
+    description,
+    price: parseFloat(price),
+    category,
+    image,
+    stock: parseInt(stock)
+  };
+  
+  products.push(newProduct);
+  res.json({ success: true, product: newProduct });
+});
+
+app.put('/api/admin/products/:id', (req, res) => {
+  const sessionId = req.headers['x-admin-session'];
+  if (!adminSessions.has(sessionId)) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  const product = products.find(p => p.id === req.params.id);
+  if (!product) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+  
+  const { name, description, price, category, stock } = req.body;
+  product.name = name || product.name;
+  product.description = description || product.description;
+  product.price = price ? parseFloat(price) : product.price;
+  product.category = category || product.category;
+  product.stock = stock ? parseInt(stock) : product.stock;
+  
+  res.json({ success: true, product });
+});
+
+app.delete('/api/admin/products/:id', (req, res) => {
+  const sessionId = req.headers['x-admin-session'];
+  if (!adminSessions.has(sessionId)) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  const index = products.findIndex(p => p.id === req.params.id);
+  if (index === -1) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+  
+  products.splice(index, 1);
+  res.json({ success: true });
+});
+
+app.get('/api/admin/orders', (req, res) => {
+  const sessionId = req.headers['x-admin-session'];
+  if (!adminSessions.has(sessionId)) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  const allOrders = [];
+  orders.forEach((userOrders, userId) => {
+    const user = users.get(userId);
+    userOrders.forEach(order => {
+      allOrders.push({
+        ...order,
+        userName: user?.name || 'Unknown',
+        userEmail: user?.email || 'Unknown'
+      });
+    });
+  });
+  
+  res.json(allOrders.sort((a, b) => new Date(b.date) - new Date(a.date)));
+});
+
+app.put('/api/admin/orders/:id', (req, res) => {
+  const sessionId = req.headers['x-admin-session'];
+  if (!adminSessions.has(sessionId)) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  const { status } = req.body;
+  let found = false;
+  
+  orders.forEach(userOrders => {
+    const order = userOrders.find(o => o.id === req.params.id);
+    if (order) {
+      order.status = status;
+      found = true;
+    }
+  });
+  
+  if (!found) {
+    return res.status(404).json({ error: 'Order not found' });
+  }
+  
+  res.json({ success: true });
+});
+
+app.get('/api/admin/users', (req, res) => {
+  const sessionId = req.headers['x-admin-session'];
+  if (!adminSessions.has(sessionId)) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  const userList = Array.from(users.values()).map(u => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    joinDate: u.joinDate,
+    active: u.active !== false
+  }));
+  
+  res.json(userList);
+});
+
+app.put('/api/admin/users/:id', (req, res) => {
+  const sessionId = req.headers['x-admin-session'];
+  if (!adminSessions.has(sessionId)) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  const user = users.get(req.params.id);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  
+  const { active } = req.body;
+  user.active = active;
+  
+  res.json({ success: true });
+});
+
+// Auth endpoints
 app.post('/api/auth/signup', (req, res) => {
   const { email, password, name } = req.body;
   
@@ -95,7 +241,7 @@ app.post('/api/auth/signup', (req, res) => {
   const userId = uuidv4();
   const sessionId = uuidv4();
   
-  users.set(userId, { id: userId, email, password, name, joinDate: new Date().toISOString() });
+  users.set(userId, { id: userId, email, password, name, joinDate: new Date().toISOString(), active: true });
   carts.set(userId, []);
   orders.set(userId, []);
   sessions.set(sessionId, userId);
@@ -121,6 +267,10 @@ app.post('/api/auth/signin', (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
   
+  if (!user.active) {
+    return res.status(403).json({ error: 'Your account has been disabled. Please contact support.' });
+  }
+  
   const sessionId = uuidv4();
   sessions.set(sessionId, user.id);
   
@@ -132,6 +282,7 @@ app.post('/api/auth/signin', (req, res) => {
   });
 });
 
+// Cart endpoints
 app.post('/api/cart/:userId', (req, res) => {
   const { productId, quantity } = req.body;
   const userId = req.params.userId;
@@ -178,7 +329,7 @@ app.post('/api/checkout/:userId', (req, res) => {
     userId,
     items: orderItems,
     total,
-    status: 'completed',
+    status: 'pending',
     date: new Date().toISOString(),
     trackingNumber: 'TRK-' + Math.random().toString(36).substr(2, 9).toUpperCase()
   };
@@ -222,6 +373,10 @@ app.get('/', (req, res) => {
     .btn-secondary:hover { background: #f0f0f0; }
     .btn-primary { background: #1a1a1a; color: white; border: none; padding: 10px 24px; border-radius: 24px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.3s; }
     .btn-primary:hover { background: #333; }
+    .btn-small { background: #1a1a1a; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; transition: all 0.3s; }
+    .btn-small:hover { background: #333; }
+    .btn-danger { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; transition: all 0.3s; }
+    .btn-danger:hover { background: #ff5252; }
     .cart-badge { background: #ff6b6b; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
     
     .container { max-width: 1200px; margin: 0 auto; padding: 60px 20px; }
@@ -259,20 +414,14 @@ app.get('/', (req, res) => {
     .modal-subtitle { font-size: 14px; color: #666; margin-bottom: 24px; }
     .form-group { margin-bottom: 20px; }
     .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
-    .form-group input { width: 100%; padding: 12px 16px; border: 1px solid #e5e5e5; border-radius: 8px; font-size: 14px; font-family: 'Inter', sans-serif; }
-    .form-group input:focus { outline: none; border-color: #1a1a1a; }
+    .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px 16px; border: 1px solid #e5e5e5; border-radius: 8px; font-size: 14px; font-family: 'Inter', sans-serif; }
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: #1a1a1a; }
     .form-group input::placeholder { color: #999; }
     .submit-btn { width: 100%; background: #1a1a1a; color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; margin-top: 8px; }
     .submit-btn:hover { background: #333; }
     .close-btn { float: right; font-size: 28px; cursor: pointer; color: #999; line-height: 1; }
     .toggle-form { text-align: center; margin-top: 20px; font-size: 14px; }
     .toggle-form a { color: #1a1a1a; cursor: pointer; font-weight: 600; text-decoration: underline; }
-    
-    .admin-dashboard { background: white; border-radius: 12px; padding: 40px; border: 1px solid #e5e5e5; }
-    .admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; margin-bottom: 40px; }
-    .stat-card { background: #f5f5f5; padding: 24px; border-radius: 12px; text-align: center; border: 1px solid #e5e5e5; }
-    .stat-value { font-size: 36px; font-weight: 700; margin-bottom: 8px; }
-    .stat-label { font-size: 14px; color: #666; font-weight: 500; }
     
     .page { display: none; }
     .page.active { display: block; animation: fadeIn 0.3s ease-in; }
@@ -287,9 +436,31 @@ app.get('/', (req, res) => {
     .order-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px; }
     .order-id { font-weight: 600; }
     .order-status { background: #c3fae8; color: #0f5132; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .order-status.pending { background: #fff3cd; color: #856404; }
     .order-total { font-size: 20px; font-weight: 700; }
     .order-items { font-size: 14px; color: #666; margin-bottom: 12px; }
     .order-tracking { font-size: 13px; color: #999; }
+    
+    .admin-dashboard { background: white; border-radius: 12px; padding: 40px; border: 1px solid #e5e5e5; }
+    .admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; margin-bottom: 40px; }
+    .stat-card { background: #f5f5f5; padding: 24px; border-radius: 12px; text-align: center; border: 1px solid #e5e5e5; }
+    .stat-value { font-size: 36px; font-weight: 700; margin-bottom: 8px; }
+    .stat-label { font-size: 14px; color: #666; font-weight: 500; }
+    
+    .admin-nav { display: flex; gap: 12px; margin-bottom: 32px; border-bottom: 1px solid #e5e5e5; padding-bottom: 16px; }
+    .admin-nav-item { padding: 8px 16px; cursor: pointer; font-weight: 600; font-size: 14px; border-bottom: 2px solid transparent; transition: all 0.3s; }
+    .admin-nav-item.active { border-bottom-color: #1a1a1a; }
+    
+    .admin-section { display: none; }
+    .admin-section.active { display: block; }
+    
+    .table-wrapper { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #f5f5f5; padding: 16px; text-align: left; font-weight: 600; font-size: 14px; border-bottom: 1px solid #e5e5e5; }
+    td { padding: 16px; border-bottom: 1px solid #e5e5e5; font-size: 14px; }
+    tr:hover { background: #fafafa; }
+    
+    .action-buttons { display: flex; gap: 8px; }
   </style>
 </head>
 <body>
@@ -351,6 +522,7 @@ app.get('/', (req, res) => {
         <h1>Admin Dashboard</h1>
         <p>Manage your store</p>
       </div>
+      
       <div class="admin-dashboard">
         <div class="admin-stats">
           <div class="stat-card">
@@ -370,7 +542,65 @@ app.get('/', (req, res) => {
             <div class="stat-label">Revenue</div>
           </div>
         </div>
-        <button class="submit-btn" onclick="signOutAdmin()">Sign Out (Admin)</button>
+
+        <div class="admin-nav">
+          <div class="admin-nav-item active" onclick="switchAdminTab('products')">📦 Products</div>
+          <div class="admin-nav-item" onclick="switchAdminTab('orders')">📋 Orders</div>
+          <div class="admin-nav-item" onclick="switchAdminTab('users')">👥 Users</div>
+        </div>
+
+        <div id="productsTab" class="admin-section active">
+          <button class="btn-primary" onclick="showAddProductModal()" style="margin-bottom: 24px;">+ Add Product</button>
+          <div class="table-wrapper">
+            <table id="productsTable">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Price</th>
+                  <th>Stock</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="productsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="ordersTab" class="admin-section">
+          <div class="table-wrapper">
+            <table id="ordersTable">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Customer</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="usersTab" class="admin-section">
+          <div class="table-wrapper">
+            <table id="usersTable">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Joined</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -386,7 +616,7 @@ app.get('/', (req, res) => {
           <input type="email" id="signInEmail" placeholder="you@example.com" required>
         </div>
         <div class="form-group">
-          <label>Password <a style="float: right; color: #1a1a1a; font-weight: 600; text-decoration: none; cursor: pointer;">Forgot?</a></label>
+          <label>Password</label>
           <input type="password" id="signInPassword" placeholder="Enter your password" required>
         </div>
         <button type="submit" class="submit-btn">→ Sign In</button>
@@ -433,6 +663,54 @@ app.get('/', (req, res) => {
           <input type="password" id="adminPassword" required>
         </div>
         <button type="submit" class="submit-btn">Admin Login</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="addProductModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal('addProductModal')">&times;</span>
+      <div class="modal-title">Add Product</div>
+      <form onsubmit="handleAddProduct(event)">
+        <div class="form-group">
+          <label>Product Name</label>
+          <input type="text" id="productName" required>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="productDesc" rows="3" required></textarea>
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select id="productCategory" required>
+            <option>Audio</option>
+            <option>Wearables</option>
+            <option>Cables</option>
+            <option>Protection</option>
+            <option>Power</option>
+            <option>Accessories</option>
+            <option>Input</option>
+            <option>Video</option>
+            <option>Lighting</option>
+            <option>Organization</option>
+            <option>Mounts</option>
+            <option>Cooling</option>
+            <option>Displays</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Price ($)</label>
+          <input type="number" id="productPrice" step="0.01" required>
+        </div>
+        <div class="form-group">
+          <label>Stock</label>
+          <input type="number" id="productStock" required>
+        </div>
+        <div class="form-group">
+          <label>Emoji Icon</label>
+          <input type="text" id="productImage" placeholder="e.g., 🎧" maxlength="2" required>
+        </div>
+        <button type="submit" class="submit-btn">Add Product</button>
       </form>
     </div>
   </div>
@@ -496,7 +774,6 @@ app.get('/', (req, res) => {
         loadOrders();
       } else if (pageName === 'admin') {
         if (!adminSessionId) {
-          alert('Please login as admin first');
           showAdminLogin();
           return;
         }
@@ -517,8 +794,188 @@ app.get('/', (req, res) => {
         document.getElementById('statUsers').textContent = stats.totalUsers;
         document.getElementById('statOrders').textContent = stats.totalOrders;
         document.getElementById('statRevenue').textContent = stats.totalRevenue;
+        
+        loadAdminProducts();
+        loadAdminOrders();
+        loadAdminUsers();
       } catch (err) {
         console.error('Error loading admin dashboard:', err);
+      }
+    }
+
+    async function loadAdminProducts() {
+      try {
+        const response = await fetch('/api/admin/products', {
+          headers: { 'x-admin-session': adminSessionId }
+        });
+        
+        const products = await response.json();
+        const tbody = document.getElementById('productsTableBody');
+        tbody.innerHTML = products.map(p => \`
+          <tr>
+            <td>\${p.name}</td>
+            <td>\${p.category}</td>
+            <td>$\${p.price.toFixed(2)}</td>
+            <td>\${p.stock}</td>
+            <td>
+              <div class="action-buttons">
+                <button class="btn-small" onclick="editProduct('\${p.id}')">Edit</button>
+                <button class="btn-danger" onclick="deleteProduct('\${p.id}')">Delete</button>
+              </div>
+            </td>
+          </tr>
+        \`).join('');
+      } catch (err) {
+        console.error('Error loading products:', err);
+      }
+    }
+
+    async function loadAdminOrders() {
+      try {
+        const response = await fetch('/api/admin/orders', {
+          headers: { 'x-admin-session': adminSessionId }
+        });
+        
+        const orders = await response.json();
+        const tbody = document.getElementById('ordersTableBody');
+        tbody.innerHTML = orders.map(o => \`
+          <tr>
+            <td>\${o.id.substr(0, 8)}</td>
+            <td>\${o.userName}</td>
+            <td>$\${o.total.toFixed(2)}</td>
+            <td>
+              <select onchange="updateOrderStatus('\${o.id}', this.value)" style="padding: 6px; border-radius: 4px; border: 1px solid #e5e5e5;">
+                <option value="pending" \${o.status === 'pending' ? 'selected' : ''}>Pending</option>
+                <option value="processing" \${o.status === 'processing' ? 'selected' : ''}>Processing</option>
+                <option value="shipped" \${o.status === 'shipped' ? 'selected' : ''}>Shipped</option>
+                <option value="completed" \${o.status === 'completed' ? 'selected' : ''}>Completed</option>
+              </select>
+            </td>
+            <td>\${new Date(o.date).toLocaleDateString()}</td>
+            <td>\${o.trackingNumber}</td>
+          </tr>
+        \`).join('');
+      } catch (err) {
+        console.error('Error loading orders:', err);
+      }
+    }
+
+    async function loadAdminUsers() {
+      try {
+        const response = await fetch('/api/admin/users', {
+          headers: { 'x-admin-session': adminSessionId }
+        });
+        
+        const users = await response.json();
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = users.map(u => \`
+          <tr>
+            <td>\${u.name}</td>
+            <td>\${u.email}</td>
+            <td>\${new Date(u.joinDate).toLocaleDateString()}</td>
+            <td>
+              <span style="background: \${u.active ? '#c3fae8' : '#f8d7da'}; color: \${u.active ? '#0f5132' : '#721c24'}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                \${u.active ? 'Active' : 'Disabled'}
+              </span>
+            </td>
+            <td>
+              <button class="btn-small" onclick="toggleUserStatus('\${u.id}', \${!u.active})">
+                \${u.active ? 'Disable' : 'Enable'}
+              </button>
+            </td>
+          </tr>
+        \`).join('');
+      } catch (err) {
+        console.error('Error loading users:', err);
+      }
+    }
+
+    function switchAdminTab(tab) {
+      document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.admin-nav-item').forEach(i => i.classList.remove('active'));
+      
+      document.getElementById(tab + 'Tab').classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    async function deleteProduct(productId) {
+      if (!confirm('Are you sure you want to delete this product?')) return;
+      
+      try {
+        await fetch(\`/api/admin/products/\${productId}\`, {
+          method: 'DELETE',
+          headers: { 'x-admin-session': adminSessionId }
+        });
+        loadAdminProducts();
+      } catch (err) {
+        alert('Error deleting product');
+      }
+    }
+
+    async function updateOrderStatus(orderId, status) {
+      try {
+        await fetch(\`/api/admin/orders/\${orderId}\`, {
+          method: 'PUT',
+          headers: { 
+            'x-admin-session': adminSessionId,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ status })
+        });
+      } catch (err) {
+        alert('Error updating order');
+      }
+    }
+
+    async function toggleUserStatus(userId, active) {
+      try {
+        await fetch(\`/api/admin/users/\${userId}\`, {
+          method: 'PUT',
+          headers: { 
+            'x-admin-session': adminSessionId,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ active })
+        });
+        loadAdminUsers();
+      } catch (err) {
+        alert('Error updating user');
+      }
+    }
+
+    function showAddProductModal() {
+      document.getElementById('addProductModal').classList.add('active');
+    }
+
+    async function handleAddProduct(event) {
+      event.preventDefault();
+      
+      const product = {
+        name: document.getElementById('productName').value,
+        description: document.getElementById('productDesc').value,
+        category: document.getElementById('productCategory').value,
+        price: document.getElementById('productPrice').value,
+        stock: document.getElementById('productStock').value,
+        image: document.getElementById('productImage').value
+      };
+      
+      try {
+        const response = await fetch('/api/admin/products', {
+          method: 'POST',
+          headers: { 
+            'x-admin-session': adminSessionId,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(product)
+        });
+        
+        if (response.ok) {
+          closeModal('addProductModal');
+          loadAdminProducts();
+          alert('✅ Product added successfully!');
+        }
+      } catch (err) {
+        alert('Error adding product');
       }
     }
 
@@ -544,7 +1001,7 @@ app.get('/', (req, res) => {
                 <div style="font-size: 12px; color: #999; margin-top: 4px;">\${new Date(order.date).toLocaleDateString()}</div>
               </div>
               <div style="text-align: right;">
-                <div class="order-status">\${order.status}</div>
+                <div class="order-status \${order.status}">\${order.status}</div>
                 <div class="order-total" style="margin-top: 8px;">$\${order.total.toFixed(2)}</div>
               </div>
             </div>
