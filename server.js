@@ -1,13 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
-import Stripe from 'stripe';
 
 const app = express();
 const PORT = parseInt(process.env.PORT) || 3000;
-const STRIPE_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_demo';
-
-const stripe = new Stripe(STRIPE_KEY);
 
 app.use(cors());
 app.use(express.json());
@@ -43,30 +39,19 @@ const sessions = new Map();
 const adminSessions = new Map();
 const orders = new Map();
 
-// Admin credentials
 const ADMIN_EMAIL = 'admin@store.com';
 const ADMIN_PASSWORD = 'admin123';
 
-// Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Get all products
 app.get('/api/products', (req, res) => {
   res.json(products);
 });
 
-// Get single product
-app.get('/api/products/:id', (req, res) => {
-  const product = products.find(p => p.id === req.params.id);
-  res.json(product || { error: 'Not found' });
-});
-
-// Admin login
 app.post('/api/admin/login', (req, res) => {
   const { email, password } = req.body;
-  
   if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
     const adminSessionId = uuidv4();
     adminSessions.set(adminSessionId, { email, loginTime: new Date() });
@@ -76,14 +61,6 @@ app.post('/api/admin/login', (req, res) => {
   }
 });
 
-// Admin logout
-app.post('/api/admin/logout', (req, res) => {
-  const sessionId = req.headers['x-admin-session'];
-  adminSessions.delete(sessionId);
-  res.json({ success: true });
-});
-
-// Get admin dashboard stats
 app.get('/api/admin/stats', (req, res) => {
   const sessionId = req.headers['x-admin-session'];
   if (!adminSessions.has(sessionId)) {
@@ -103,99 +80,6 @@ app.get('/api/admin/stats', (req, res) => {
   });
 });
 
-// Get all users (admin)
-app.get('/api/admin/users', (req, res) => {
-  const sessionId = req.headers['x-admin-session'];
-  if (!adminSessions.has(sessionId)) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-  
-  const allUsers = Array.from(users.values()).map(u => ({
-    id: u.id,
-    name: u.name,
-    email: u.email,
-    joinDate: u.joinDate || new Date().toISOString()
-  }));
-  
-  res.json(allUsers);
-});
-
-// Get all orders (admin)
-app.get('/api/admin/orders', (req, res) => {
-  const sessionId = req.headers['x-admin-session'];
-  if (!adminSessions.has(sessionId)) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-  
-  const allOrders = [];
-  orders.forEach((userOrders, userId) => {
-    userOrders.forEach(order => {
-      allOrders.push({
-        ...order,
-        userId,
-        userName: users.get(userId)?.name || 'Unknown'
-      });
-    });
-  });
-  
-  res.json(allOrders.sort((a, b) => new Date(b.date) - new Date(a.date)));
-});
-
-// Add product (admin)
-app.post('/api/admin/products', (req, res) => {
-  const sessionId = req.headers['x-admin-session'];
-  if (!adminSessions.has(sessionId)) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-  
-  const { name, description, price, category, image } = req.body;
-  const newProduct = {
-    id: uuidv4(),
-    name,
-    description,
-    price: parseFloat(price),
-    category,
-    image
-  };
-  
-  products.push(newProduct);
-  res.json({ success: true, product: newProduct });
-});
-
-// Update product (admin)
-app.put('/api/admin/products/:id', (req, res) => {
-  const sessionId = req.headers['x-admin-session'];
-  if (!adminSessions.has(sessionId)) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-  
-  const product = products.find(p => p.id === req.params.id);
-  if (!product) {
-    return res.status(404).json({ error: 'Product not found' });
-  }
-  
-  const { name, description, price, category, image } = req.body;
-  product.name = name || product.name;
-  product.description = description || product.description;
-  product.price = price ? parseFloat(price) : product.price;
-  product.category = category || product.category;
-  product.image = image || product.image;
-  
-  res.json({ success: true, product });
-});
-
-// Delete product (admin)
-app.delete('/api/admin/products/:id', (req, res) => {
-  const sessionId = req.headers['x-admin-session'];
-  if (!adminSessions.has(sessionId)) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-  
-  products = products.filter(p => p.id !== req.params.id);
-  res.json({ success: true });
-});
-
-// Sign up
 app.post('/api/auth/signup', (req, res) => {
   const { email, password, name } = req.body;
   
@@ -224,7 +108,6 @@ app.post('/api/auth/signup', (req, res) => {
   });
 });
 
-// Sign in
 app.post('/api/auth/signin', (req, res) => {
   const { email, password } = req.body;
   
@@ -249,7 +132,6 @@ app.post('/api/auth/signin', (req, res) => {
   });
 });
 
-// Add to cart
 app.post('/api/cart/:userId', (req, res) => {
   const { productId, quantity } = req.body;
   const userId = req.params.userId;
@@ -270,7 +152,6 @@ app.post('/api/cart/:userId', (req, res) => {
   res.json({ success: true, cart });
 });
 
-// Checkout
 app.post('/api/checkout/:userId', (req, res) => {
   const userId = req.params.userId;
   const cart = carts.get(userId) || [];
@@ -312,14 +193,12 @@ app.post('/api/checkout/:userId', (req, res) => {
   res.json({ success: true, order });
 });
 
-// Get user orders
 app.get('/api/orders/:userId', (req, res) => {
   const userId = req.params.userId;
   const userOrders = orders.get(userId) || [];
   res.json(userOrders);
 });
 
-// Main page
 app.get('/', (req, res) => {
   res.send(`
 <!DOCTYPE html>
@@ -327,130 +206,145 @@ app.get('/', (req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Premium Tech Store - Best Products Online</title>
+  <title>Best Products - Premium Tech Store</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; background: #f8f9fa; color: #333; }
+    body { font-family: 'Inter', sans-serif; background: #fafafa; color: #1a1a1a; }
     
-    header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    header { background: white; padding: 24px 0; border-bottom: 1px solid #e5e5e5; }
     .header-content { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; }
-    .logo { font-size: 28px; font-weight: bold; cursor: pointer; }
-    .header-right { display: flex; gap: 20px; align-items: center; }
-    .nav-menu { display: flex; gap: 15px; align-items: center; list-style: none; }
-    .nav-item { color: white; cursor: pointer; font-size: 14px; transition: all 0.3s; padding: 8px 12px; border-radius: 6px; }
-    .nav-item:hover { background: rgba(255,255,255,0.2); }
-    .nav-item.admin { background: rgba(255, 107, 107, 0.3); }
-    .user-info { color: white; font-size: 14px; font-weight: 600; }
-    .cart-badge { background: #ff6b6b; color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; }
+    .logo { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 700; cursor: pointer; letter-spacing: -0.5px; }
+    .header-right { display: flex; gap: 16px; align-items: center; }
+    .nav-item { color: #1a1a1a; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s; padding: 8px 0; border-bottom: 2px solid transparent; }
+    .nav-item:hover { border-bottom-color: #1a1a1a; }
+    .btn-secondary { background: white; color: #1a1a1a; border: 1px solid #1a1a1a; padding: 10px 24px; border-radius: 24px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.3s; }
+    .btn-secondary:hover { background: #f0f0f0; }
+    .btn-primary { background: #1a1a1a; color: white; border: none; padding: 10px 24px; border-radius: 24px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.3s; }
+    .btn-primary:hover { background: #333; }
+    .cart-badge { background: #ff6b6b; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
     
-    .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 60px 20px; }
     
-    .hero { text-align: center; margin-bottom: 50px; }
-    .hero h1 { font-size: 42px; margin-bottom: 10px; color: #2d3748; }
-    .hero p { font-size: 18px; color: #718096; }
+    .hero { text-align: center; margin-bottom: 60px; }
+    .hero h1 { font-family: 'Playfair Display', serif; font-size: 56px; font-weight: 700; margin-bottom: 16px; letter-spacing: -1px; }
+    .hero p { font-size: 18px; color: #666; margin-bottom: 32px; }
     
-    .filters { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
-    .filter-btn { padding: 8px 16px; border: 2px solid #e2e8f0; background: white; border-radius: 20px; cursor: pointer; transition: all 0.3s; }
-    .filter-btn.active { background: #667eea; color: white; border-color: #667eea; }
-    .filter-btn:hover { border-color: #667eea; }
+    .filters { display: flex; gap: 12px; margin-bottom: 40px; flex-wrap: wrap; justify-content: center; }
+    .filter-btn { padding: 10px 20px; border: 1px solid #e5e5e5; background: white; border-radius: 24px; cursor: pointer; transition: all 0.3s; font-size: 14px; font-weight: 500; }
+    .filter-btn.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+    .filter-btn:hover { border-color: #1a1a1a; }
     
-    .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
+    .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 32px; }
     
-    .product-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s; }
-    .product-card:hover { transform: translateY(-8px); box-shadow: 0 12px 24px rgba(0,0,0,0.15); }
+    .product-card { background: white; border-radius: 12px; overflow: hidden; border: 1px solid #e5e5e5; transition: all 0.3s; }
+    .product-card:hover { border-color: #1a1a1a; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
     
-    .product-image { font-size: 80px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); height: 200px; }
+    .product-image { font-size: 80px; display: flex; align-items: center; justify-content: center; background: #f5f5f5; height: 200px; }
     
-    .product-info { padding: 20px; }
-    .product-name { font-size: 18px; font-weight: 600; margin-bottom: 8px; color: #2d3748; }
-    .product-desc { font-size: 13px; color: #718096; margin-bottom: 12px; line-height: 1.4; }
-    .product-category { display: inline-block; background: #edf2f7; color: #667eea; padding: 4px 12px; border-radius: 12px; font-size: 12px; margin-bottom: 12px; }
+    .product-info { padding: 24px; }
+    .product-name { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    .product-desc { font-size: 14px; color: #666; margin-bottom: 16px; line-height: 1.5; }
+    .product-category { display: inline-block; background: #f0f0f0; color: #1a1a1a; padding: 4px 12px; border-radius: 12px; font-size: 12px; margin-bottom: 16px; font-weight: 500; }
     
     .product-footer { display: flex; justify-content: space-between; align-items: center; }
-    .price { font-size: 24px; font-weight: bold; color: #667eea; }
-    .add-btn { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
-    .add-btn:hover { background: #764ba2; transform: scale(1.05); }
+    .price { font-size: 24px; font-weight: 700; }
+    .add-btn { background: #1a1a1a; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s; font-size: 14px; }
+    .add-btn:hover { background: #333; }
     
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
     .modal.active { display: flex; }
-    .modal-content { background: white; padding: 40px; border-radius: 12px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
-    .modal-title { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
-    .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
-    .form-group input { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; }
-    .form-group input:focus { outline: none; border-color: #667eea; }
-    .submit-btn { width: 100%; background: #667eea; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: 600; cursor: pointer; }
-    .submit-btn:hover { background: #764ba2; }
-    .close-btn { float: right; font-size: 24px; cursor: pointer; color: #999; }
-    .toggle-form { text-align: center; margin-top: 15px; font-size: 14px; }
-    .toggle-form a { color: #667eea; cursor: pointer; text-decoration: underline; }
+    .modal-content { background: white; padding: 48px; border-radius: 12px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+    .modal-title { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 700; margin-bottom: 32px; }
+    .modal-subtitle { font-size: 14px; color: #666; margin-bottom: 24px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+    .form-group input { width: 100%; padding: 12px 16px; border: 1px solid #e5e5e5; border-radius: 8px; font-size: 14px; font-family: 'Inter', sans-serif; }
+    .form-group input:focus { outline: none; border-color: #1a1a1a; }
+    .form-group input::placeholder { color: #999; }
+    .submit-btn { width: 100%; background: #1a1a1a; color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; margin-top: 8px; }
+    .submit-btn:hover { background: #333; }
+    .close-btn { float: right; font-size: 28px; cursor: pointer; color: #999; line-height: 1; }
+    .toggle-form { text-align: center; margin-top: 20px; font-size: 14px; }
+    .toggle-form a { color: #1a1a1a; cursor: pointer; font-weight: 600; text-decoration: underline; }
     
-    .admin-dashboard { background: white; border-radius: 12px; padding: 30px; }
-    .admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
-    .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; text-align: center; }
-    .stat-value { font-size: 32px; font-weight: bold; }
-    .stat-label { font-size: 14px; margin-top: 5px; opacity: 0.9; }
+    .admin-dashboard { background: white; border-radius: 12px; padding: 40px; border: 1px solid #e5e5e5; }
+    .admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; margin-bottom: 40px; }
+    .stat-card { background: #f5f5f5; padding: 24px; border-radius: 12px; text-align: center; border: 1px solid #e5e5e5; }
+    .stat-value { font-size: 36px; font-weight: 700; margin-bottom: 8px; }
+    .stat-label { font-size: 14px; color: #666; font-weight: 500; }
     
     .page { display: none; }
-    .page.active { display: block; }
+    .page.active { display: block; animation: fadeIn 0.3s ease-in; }
     
-    footer { background: #2d3748; color: white; padding: 40px 20px; text-align: center; margin-top: 60px; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    
+    footer { background: white; border-top: 1px solid #e5e5e5; padding: 40px 20px; text-align: center; color: #666; font-size: 14px; margin-top: 80px; }
+    
+    .orders-list { background: white; border-radius: 12px; border: 1px solid #e5e5e5; }
+    .order-item { padding: 24px; border-bottom: 1px solid #e5e5e5; }
+    .order-item:last-child { border-bottom: none; }
+    .order-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px; }
+    .order-id { font-weight: 600; }
+    .order-status { background: #c3fae8; color: #0f5132; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .order-total { font-size: 20px; font-weight: 700; }
+    .order-items { font-size: 14px; color: #666; margin-bottom: 12px; }
+    .order-tracking { font-size: 13px; color: #999; }
   </style>
 </head>
 <body>
   <header>
     <div class="header-content">
-      <div class="logo" onclick="showPage('home')">🛍️ Premium Tech Store</div>
+      <div class="logo" onclick="showPage('home')">Best Products</div>
       <div class="header-right">
-        <ul class="nav-menu">
-          <li id="userSection" style="display:none;">
-            <span class="user-info">👤 <span id="userName"></span></span>
-          </li>
-          <li id="ordersLink" style="display:none;" class="nav-item" onclick="showPage('orders')">📦 Orders</li>
-          <li id="adminLink" style="display:none;" class="nav-item admin" onclick="showPage('admin')">⚙️ Admin</li>
-          <li id="signOutLink" style="display:none;" class="nav-item" onclick="signOut()">Sign Out</li>
-          <li id="signInLink" class="nav-item" onclick="showSignIn()">Sign In</li>
-          <li id="signUpLink" class="nav-item" onclick="showSignUp()">Sign Up</li>
-          <li id="adminLoginLink" class="nav-item admin" onclick="showAdminLogin()">🔐 Admin</li>
-        </ul>
-        <div class="cart-badge" onclick="viewCart()">🛒 <span id="cartCount">0</span></div>
+        <div id="userSection" style="display:none; display: flex; gap: 16px; align-items: center;">
+          <span style="font-size: 14px; font-weight: 500;">👤 <span id="userName"></span></span>
+          <a class="nav-item" onclick="showPage('orders')">📦 Orders</a>
+          <a class="nav-item" onclick="signOut()">Sign Out</a>
+        </div>
+        <div id="adminSection" style="display:none; display: flex; gap: 16px; align-items: center;">
+          <a class="nav-item" onclick="showPage('admin')">⚙️ Admin</a>
+          <a class="nav-item" onclick="signOutAdmin()">Sign Out</a>
+        </div>
+        <div id="authSection">
+          <button class="btn-secondary" onclick="showSignIn()">Sign In</button>
+          <button class="btn-primary" onclick="showSignUp()">Register</button>
+        </div>
+        <div class="cart-badge" onclick="viewCart()" style="cursor: pointer;">🛒 <span id="cartCount">0</span></div>
       </div>
     </div>
   </header>
 
-  <!-- Home Page -->
   <div id="home" class="page active">
     <div class="container">
       <div class="hero">
-        <h1>Best Tech Products Online</h1>
-        <p>Premium accessories and electronics for your digital lifestyle</p>
+        <h1>Best Products</h1>
+        <p>Curated products with exceptional quality and value</p>
       </div>
 
       <div class="filters">
-        <button class="filter-btn active" onclick="filterProducts('all')">All Products</button>
-        <button class="filter-btn" onclick="filterProducts('Audio')">🎧 Audio</button>
-        <button class="filter-btn" onclick="filterProducts('Wearables')">⌚ Wearables</button>
-        <button class="filter-btn" onclick="filterProducts('Input')">⌨️ Input</button>
-        <button class="filter-btn" onclick="filterProducts('Power')">🔋 Power</button>
-        <button class="filter-btn" onclick="filterProducts('Cables')">🔌 Cables</button>
+        <button class="filter-btn active" onclick="filterProducts('all')">All</button>
+        <button class="filter-btn" onclick="filterProducts('Audio')">Audio</button>
+        <button class="filter-btn" onclick="filterProducts('Wearables')">Wearables</button>
+        <button class="filter-btn" onclick="filterProducts('Input')">Input</button>
+        <button class="filter-btn" onclick="filterProducts('Power')">Power</button>
+        <button class="filter-btn" onclick="filterProducts('Cables')">Cables</button>
       </div>
 
       <div class="products-grid" id="products"></div>
     </div>
   </div>
 
-  <!-- Orders Page -->
   <div id="orders" class="page">
     <div class="container">
       <div class="hero">
         <h1>Your Orders</h1>
         <p>Track and manage your purchases</p>
       </div>
-      <div id="ordersList"></div>
+      <div class="orders-list" id="ordersList"></div>
     </div>
   </div>
 
-  <!-- Admin Dashboard -->
   <div id="admin" class="page">
     <div class="container">
       <div class="hero">
@@ -461,71 +355,70 @@ app.get('/', (req, res) => {
         <div class="admin-stats">
           <div class="stat-card">
             <div class="stat-value" id="statProducts">0</div>
-            <div class="stat-label">Total Products</div>
+            <div class="stat-label">Products</div>
           </div>
           <div class="stat-card">
             <div class="stat-value" id="statUsers">0</div>
-            <div class="stat-label">Total Users</div>
+            <div class="stat-label">Users</div>
           </div>
           <div class="stat-card">
             <div class="stat-value" id="statOrders">0</div>
-            <div class="stat-label">Total Orders</div>
+            <div class="stat-label">Orders</div>
           </div>
           <div class="stat-card">
             <div class="stat-value">$<span id="statRevenue">0</span></div>
-            <div class="stat-label">Total Revenue</div>
+            <div class="stat-label">Revenue</div>
           </div>
         </div>
-        <button class="submit-btn" onclick="showAdminLogout()">Sign Out (Admin)</button>
+        <button class="submit-btn" onclick="signOutAdmin()">Sign Out (Admin)</button>
       </div>
     </div>
   </div>
 
-  <!-- Sign In Modal -->
   <div id="signInModal" class="modal">
     <div class="modal-content">
       <span class="close-btn" onclick="closeModal('signInModal')">&times;</span>
-      <div class="modal-title">Sign In</div>
+      <div class="modal-title">Welcome Back</div>
+      <div class="modal-subtitle">Sign in to your account to continue</div>
       <form onsubmit="handleSignIn(event)">
         <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="signInEmail" required>
+          <label>Email Address</label>
+          <input type="email" id="signInEmail" placeholder="you@example.com" required>
         </div>
         <div class="form-group">
-          <label>Password</label>
-          <input type="password" id="signInPassword" required>
+          <label>Password <a style="float: right; color: #1a1a1a; font-weight: 600; text-decoration: none; cursor: pointer;">Forgot?</a></label>
+          <input type="password" id="signInPassword" placeholder="Enter your password" required>
         </div>
-        <button type="submit" class="submit-btn">Sign In</button>
+        <button type="submit" class="submit-btn">→ Sign In</button>
       </form>
-      <div class="toggle-form">Don't have an account? <a onclick="switchToSignUp()">Sign Up</a></div>
+      <div class="toggle-form">Don't have an account? <a onclick="switchToSignUp()">Create one</a></div>
     </div>
   </div>
 
-  <!-- Sign Up Modal -->
   <div id="signUpModal" class="modal">
     <div class="modal-content">
       <span class="close-btn" onclick="closeModal('signUpModal')">&times;</span>
       <div class="modal-title">Create Account</div>
+      <div class="modal-subtitle">Join us to start shopping</div>
       <form onsubmit="handleSignUp(event)">
         <div class="form-group">
           <label>Full Name</label>
-          <input type="text" id="signUpName" required>
+          <input type="text" id="signUpName" placeholder="Your name" required>
         </div>
         <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="signUpEmail" required>
+          <label>Email Address</label>
+          <input type="email" id="signUpEmail" placeholder="you@example.com" required>
         </div>
         <div class="form-group">
           <label>Password</label>
-          <input type="password" id="signUpPassword" required>
+          <input type="password" id="signUpPassword" placeholder="Create a password" required>
         </div>
         <button type="submit" class="submit-btn">Create Account</button>
       </form>
-      <div class="toggle-form">Already have an account? <a onclick="switchToSignIn()">Sign In</a></div>
+      <div class="toggle-form">Already have an account? <a onclick="switchToSignIn()">Sign in</a></div>
     </div>
   </div>
 
-  <!-- Admin Login Modal -->
   <div id="adminLoginModal" class="modal">
     <div class="modal-content">
       <span class="close-btn" onclick="closeModal('adminLoginModal')">&times;</span>
@@ -541,19 +434,11 @@ app.get('/', (req, res) => {
         </div>
         <button type="submit" class="submit-btn">Admin Login</button>
       </form>
-
     </div>
-  </div>
-
-  <div class="cart-icon" onclick="viewCart()">
-    🛒
-    <div class="cart-count" id="cartBadge">0</div>
   </div>
 
   <footer>
-    <div class="footer-content">
-      <p>&copy; 2026 Premium Tech Store. All rights reserved.</p>
-    </div>
+    <p>&copy; 2026 Best Products. All rights reserved.</p>
   </footer>
 
   <script>
@@ -583,30 +468,18 @@ app.get('/', (req, res) => {
 
     function updateAuthUI() {
       if (adminSessionId) {
-        document.getElementById('adminLoginLink').style.display = 'none';
-        document.getElementById('adminLink').style.display = 'block';
-        document.getElementById('signInLink').style.display = 'none';
-        document.getElementById('signUpLink').style.display = 'none';
+        document.getElementById('adminSection').style.display = 'flex';
+        document.getElementById('authSection').style.display = 'none';
         document.getElementById('userSection').style.display = 'none';
-        document.getElementById('ordersLink').style.display = 'none';
-        document.getElementById('signOutLink').style.display = 'none';
       } else if (currentUser) {
-        document.getElementById('userSection').style.display = 'block';
-        document.getElementById('ordersLink').style.display = 'block';
-        document.getElementById('signOutLink').style.display = 'block';
-        document.getElementById('signInLink').style.display = 'none';
-        document.getElementById('signUpLink').style.display = 'none';
-        document.getElementById('adminLink').style.display = 'none';
-        document.getElementById('adminLoginLink').style.display = 'block';
+        document.getElementById('userSection').style.display = 'flex';
+        document.getElementById('authSection').style.display = 'none';
+        document.getElementById('adminSection').style.display = 'none';
         document.getElementById('userName').textContent = currentUser.name;
       } else {
+        document.getElementById('authSection').style.display = 'flex';
         document.getElementById('userSection').style.display = 'none';
-        document.getElementById('ordersLink').style.display = 'none';
-        document.getElementById('signOutLink').style.display = 'none';
-        document.getElementById('signInLink').style.display = 'block';
-        document.getElementById('signUpLink').style.display = 'block';
-        document.getElementById('adminLink').style.display = 'none';
-        document.getElementById('adminLoginLink').style.display = 'block';
+        document.getElementById('adminSection').style.display = 'none';
       }
     }
 
@@ -659,26 +532,26 @@ app.get('/', (req, res) => {
         const ordersList = document.getElementById('ordersList');
         
         if (userOrders.length === 0) {
-          ordersList.innerHTML = '<p style="text-align: center; color: #718096;">No orders yet. Start shopping!</p>';
+          ordersList.innerHTML = '<div style="padding: 40px; text-align: center; color: #666;">No orders yet. Start shopping!</div>';
           return;
         }
         
         ordersList.innerHTML = userOrders.map(order => \`
-          <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+          <div class="order-item">
+            <div class="order-header">
               <div>
-                <div style="font-weight: bold; color: #667eea;">Order #\${order.id.substr(0, 8)}</div>
-                <div style="font-size: 12px; color: #718096;">\${new Date(order.date).toLocaleDateString()}</div>
+                <div class="order-id">Order #\${order.id.substr(0, 8)}</div>
+                <div style="font-size: 12px; color: #999; margin-top: 4px;">\${new Date(order.date).toLocaleDateString()}</div>
               </div>
               <div style="text-align: right;">
-                <div style="background: #c3fae8; color: #0f5132; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; display: inline-block;">\${order.status}</div>
-                <div style="font-size: 18px; font-weight: bold; color: #2d3748;">$\${order.total.toFixed(2)}</div>
+                <div class="order-status">\${order.status}</div>
+                <div class="order-total" style="margin-top: 8px;">$\${order.total.toFixed(2)}</div>
               </div>
             </div>
-            <div style="font-size: 13px; color: #718096;">
+            <div class="order-items">
               <strong>Items:</strong> \${order.items.map(i => \`\${i.productName} (x\${i.quantity})\`).join(', ')}
             </div>
-            <div style="font-size: 13px; color: #718096;">
+            <div class="order-tracking">
               <strong>Tracking:</strong> \${order.trackingNumber}
             </div>
           </div>
@@ -721,7 +594,7 @@ app.get('/', (req, res) => {
       document.getElementById('adminLoginModal').classList.add('active');
     }
 
-    function showAdminLogout() {
+    function signOutAdmin() {
       if (confirm('Are you sure you want to sign out as admin?')) {
         adminSessionId = null;
         localStorage.removeItem('adminSessionId');
@@ -871,8 +744,7 @@ app.get('/', (req, res) => {
       }
       cartCount++;
       document.getElementById('cartCount').textContent = cartCount;
-      document.getElementById('cartBadge').textContent = cartCount;
-      alert(\`✅ Added "\${name}" ($\${price.toFixed(2)}) to cart!\`);
+      alert(\`✅ Added "\${name}" to cart!\`);
     }
 
     function viewCart() {
@@ -903,7 +775,6 @@ app.get('/', (req, res) => {
         if (data.success) {
           cartCount = 0;
           document.getElementById('cartCount').textContent = '0';
-          document.getElementById('cartBadge').textContent = '0';
           alert(\`✅ Order placed successfully!\\nOrder ID: \${data.order.id.substr(0, 8)}\\nTracking: \${data.order.trackingNumber}\`);
           showPage('orders');
         }
@@ -921,6 +792,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Premium Tech Store running on port ${PORT}`);
-  console.log(`📊 Admin Panel: Use email "admin@store.com" and password "admin123"`);
+  console.log(\`✅ Best Products Store running on port \${PORT}\`);
 });
