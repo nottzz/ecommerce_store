@@ -461,6 +461,15 @@ app.get('/', (req, res) => {
     tr:hover { background: #fafafa; }
     
     .action-buttons { display: flex; gap: 8px; }
+    
+    .admin-cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 40px; }
+    .admin-card { background: white; border: 1px solid #e5e5e5; border-radius: 12px; padding: 40px 24px; text-align: center; cursor: pointer; transition: all 0.3s; }
+    .admin-card:hover { border-color: #1a1a1a; box-shadow: 0 8px 24px rgba(0,0,0,0.08); transform: translateY(-4px); }
+    .admin-card-icon { font-size: 48px; margin-bottom: 20px; }
+    .admin-card-title { font-size: 24px; font-weight: 700; margin-bottom: 12px; font-family: 'Playfair Display', serif; }
+    .admin-card-desc { font-size: 14px; color: #666; line-height: 1.6; }
+    
+    .admin-detail-section { padding: 20px 0; }
   </style>
 </head>
 <body>
@@ -543,13 +552,31 @@ app.get('/', (req, res) => {
           </div>
         </div>
 
-        <div class="admin-nav">
-          <div class="admin-nav-item active" onclick="switchAdminTab('products')">📦 Products</div>
-          <div class="admin-nav-item" onclick="switchAdminTab('orders')">📋 Orders</div>
-          <div class="admin-nav-item" onclick="switchAdminTab('users')">👥 Users</div>
+        <div class="admin-cards-grid">
+          <div class="admin-card" onclick="showAdminSection('products')">
+            <div class="admin-card-icon">📦</div>
+            <div class="admin-card-title">Products</div>
+            <div class="admin-card-desc">Add, edit, and manage your product catalog</div>
+          </div>
+          <div class="admin-card" onclick="showAdminSection('orders')">
+            <div class="admin-card-icon">📋</div>
+            <div class="admin-card-title">Orders</div>
+            <div class="admin-card-desc">View and manage customer orders</div>
+          </div>
+          <div class="admin-card" onclick="showAdminSection('categories')">
+            <div class="admin-card-icon">🏷️</div>
+            <div class="admin-card-title">Categories</div>
+            <div class="admin-card-desc">Organize products into categories</div>
+          </div>
+          <div class="admin-card" onclick="showAdminSection('users')">
+            <div class="admin-card-icon">👥</div>
+            <div class="admin-card-title">Users</div>
+            <div class="admin-card-desc">Manage user accounts and permissions</div>
+          </div>
         </div>
 
-        <div id="productsTab" class="admin-section active">
+        <div id="productsSection" class="admin-detail-section" style="display: none;">
+          <button class="btn-secondary" onclick="backToAdminHome()" style="margin-bottom: 24px;">← Back</button>
           <button class="btn-primary" onclick="showAddProductModal()" style="margin-bottom: 24px;">+ Add Product</button>
           <div class="table-wrapper">
             <table id="productsTable">
@@ -567,7 +594,8 @@ app.get('/', (req, res) => {
           </div>
         </div>
 
-        <div id="ordersTab" class="admin-section">
+        <div id="ordersSection" class="admin-detail-section" style="display: none;">
+          <button class="btn-secondary" onclick="backToAdminHome()" style="margin-bottom: 24px;">← Back</button>
           <div class="table-wrapper">
             <table id="ordersTable">
               <thead>
@@ -585,7 +613,15 @@ app.get('/', (req, res) => {
           </div>
         </div>
 
-        <div id="usersTab" class="admin-section">
+        <div id="categoriesSection" class="admin-detail-section" style="display: none;">
+          <button class="btn-secondary" onclick="backToAdminHome()" style="margin-bottom: 24px;">← Back</button>
+          <div style="padding: 40px; text-align: center; color: #666;">
+            <p>Categories are automatically managed based on your products.</p>
+          </div>
+        </div>
+
+        <div id="usersSection" class="admin-detail-section" style="display: none;">
+          <button class="btn-secondary" onclick="backToAdminHome()" style="margin-bottom: 24px;">← Back</button>
           <div class="table-wrapper">
             <table id="usersTable">
               <thead>
@@ -890,12 +926,17 @@ app.get('/', (req, res) => {
       }
     }
 
-    function switchAdminTab(tab) {
-      document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
-      document.querySelectorAll('.admin-nav-item').forEach(i => i.classList.remove('active'));
-      
-      document.getElementById(tab + 'Tab').classList.add('active');
-      event.target.classList.add('active');
+    function showAdminSection(section) {
+      document.querySelectorAll('.admin-detail-section').forEach(s => s.style.display = 'none');
+      document.querySelector('.admin-cards-grid').style.display = 'none';
+      document.querySelector('.admin-stats').style.display = 'grid';
+      document.getElementById(section + 'Section').style.display = 'block';
+    }
+    
+    function backToAdminHome() {
+      document.querySelectorAll('.admin-detail-section').forEach(s => s.style.display = 'none');
+      document.querySelector('.admin-cards-grid').style.display = 'grid';
+      document.querySelector('.admin-stats').style.display = 'grid';
     }
 
     async function deleteProduct(productId) {
