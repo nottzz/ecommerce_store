@@ -14,7 +14,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // In-memory data store
-const products = [
+let products = [
   { id: uuidv4(), name: 'Wireless Headphones Pro', description: 'Premium noise-cancelling headphones with 30hr battery', price: 199.99, category: 'Audio', image: '🎧' },
   { id: uuidv4(), name: 'Smart Watch Ultra', description: 'Advanced fitness tracking with AMOLED display', price: 299.99, category: 'Wearables', image: '⌚' },
   { id: uuidv4(), name: 'USB-C Fast Charger', description: '65W fast charging cable with data transfer', price: 19.99, category: 'Cables', image: '🔌' },
@@ -40,7 +40,12 @@ const products = [
 const users = new Map();
 const carts = new Map();
 const sessions = new Map();
+const adminSessions = new Map();
 const orders = new Map();
+
+// Admin credentials
+const ADMIN_EMAIL = 'admin@store.com';
+const ADMIN_PASSWORD = 'admin123';
 
 // Health check
 app.get('/health', (req, res) => {
@@ -56,6 +61,138 @@ app.get('/api/products', (req, res) => {
 app.get('/api/products/:id', (req, res) => {
   const product = products.find(p => p.id === req.params.id);
   res.json(product || { error: 'Not found' });
+});
+
+// Admin login
+app.post('/api/admin/login', (req, res) => {
+  const { email, password } = req.body;
+  
+  if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+    const adminSessionId = uuidv4();
+    adminSessions.set(adminSessionId, { email, loginTime: new Date() });
+    res.json({ success: true, adminSessionId });
+  } else {
+    res.status(401).json({ error: 'Invalid admin credentials' });
+  }
+});
+
+// Admin logout
+app.post('/api/admin/logout', (req, res) => {
+  const sessionId = req.headers['x-admin-session'];
+  adminSessions.delete(sessionId);
+  res.json({ success: true });
+});
+
+// Get admin dashboard stats
+app.get('/api/admin/stats', (req, res) => {
+  const sessionId = req.headers['x-admin-session'];
+  if (!adminSessions.has(sessionId)) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  const totalOrders = Array.from(orders.values()).reduce((sum, userOrders) => sum + userOrders.length, 0);
+  const totalRevenue = Array.from(orders.values()).reduce((sum, userOrders) => 
+    sum + userOrders.reduce((orderSum, order) => orderSum + order.total, 0), 0
+  );
+  
+  res.json({
+    totalProducts: products.length,
+    totalUsers: users.size,
+    totalOrders,
+    totalRevenue: totalRevenue.toFixed(2)
+  });
+});
+
+// Get all users (admin)
+app.get('/api/admin/users', (req, res) => {
+  const sessionId = req.headers['x-admin-session'];
+  if (!adminSessions.has(sessionId)) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  const allUsers = Array.from(users.values()).map(u => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    joinDate: u.joinDate || new Date().toISOString()
+  }));
+  
+  res.json(allUsers);
+});
+
+// Get all orders (admin)
+app.get('/api/admin/orders', (req, res) => {
+  const sessionId = req.headers['x-admin-session'];
+  if (!adminSessions.has(sessionId)) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  const allOrders = [];
+  orders.forEach((userOrders, userId) => {
+    userOrders.forEach(order => {
+      allOrders.push({
+        ...order,
+        userId,
+        userName: users.get(userId)?.name || 'Unknown'
+      });
+    });
+  });
+  
+  res.json(allOrders.sort((a, b) => new Date(b.date) - new Date(a.date)));
+});
+
+// Add product (admin)
+app.post('/api/admin/products', (req, res) => {
+  const sessionId = req.headers['x-admin-session'];
+  if (!adminSessions.has(sessionId)) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  const { name, description, price, category, image } = req.body;
+  const newProduct = {
+    id: uuidv4(),
+    name,
+    description,
+    price: parseFloat(price),
+    category,
+    image
+  };
+  
+  products.push(newProduct);
+  res.json({ success: true, product: newProduct });
+});
+
+// Update product (admin)
+app.put('/api/admin/products/:id', (req, res) => {
+  const sessionId = req.headers['x-admin-session'];
+  if (!adminSessions.has(sessionId)) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  const product = products.find(p => p.id === req.params.id);
+  if (!product) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+  
+  const { name, description, price, category, image } = req.body;
+  product.name = name || product.name;
+  product.description = description || product.description;
+  product.price = price ? parseFloat(price) : product.price;
+  product.category = category || product.category;
+  product.image = image || product.image;
+  
+  res.json({ success: true, product });
+});
+
+// Delete product (admin)
+app.delete('/api/admin/products/:id', (req, res) => {
+  const sessionId = req.headers['x-admin-session'];
+  if (!adminSessions.has(sessionId)) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  products = products.filter(p => p.id !== req.params.id);
+  res.json({ success: true });
 });
 
 // Sign up
@@ -74,7 +211,7 @@ app.post('/api/auth/signup', (req, res) => {
   const userId = uuidv4();
   const sessionId = uuidv4();
   
-  users.set(userId, { id: userId, email, password, name });
+  users.set(userId, { id: userId, email, password, name, joinDate: new Date().toISOString() });
   carts.set(userId, []);
   orders.set(userId, []);
   sessions.set(sessionId, userId);
@@ -112,26 +249,6 @@ app.post('/api/auth/signin', (req, res) => {
   });
 });
 
-// Get current user
-app.get('/api/auth/me', (req, res) => {
-  const sessionId = req.headers['x-session-id'];
-  const userId = sessions.get(sessionId);
-  
-  if (!userId) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-  
-  const user = users.get(userId);
-  res.json({ id: user.id, email: user.email, name: user.name });
-});
-
-// Sign out
-app.post('/api/auth/signout', (req, res) => {
-  const sessionId = req.headers['x-session-id'];
-  sessions.delete(sessionId);
-  res.json({ success: true });
-});
-
 // Add to cart
 app.post('/api/cart/:userId', (req, res) => {
   const { productId, quantity } = req.body;
@@ -153,17 +270,7 @@ app.post('/api/cart/:userId', (req, res) => {
   res.json({ success: true, cart });
 });
 
-// Get cart
-app.get('/api/cart/:userId', (req, res) => {
-  const cart = carts.get(req.params.userId) || [];
-  const items = cart.map(item => {
-    const product = products.find(p => p.id === item.productId);
-    return { ...item, product };
-  });
-  res.json(items);
-});
-
-// Checkout (create order)
+// Checkout
 app.post('/api/checkout/:userId', (req, res) => {
   const userId = req.params.userId;
   const cart = carts.get(userId) || [];
@@ -212,14 +319,6 @@ app.get('/api/orders/:userId', (req, res) => {
   res.json(userOrders);
 });
 
-// Get single order
-app.get('/api/orders/:userId/:orderId', (req, res) => {
-  const { userId, orderId } = req.params;
-  const userOrders = orders.get(userId) || [];
-  const order = userOrders.find(o => o.id === orderId);
-  res.json(order || { error: 'Order not found' });
-});
-
 // Main page
 app.get('/', (req, res) => {
   res.send(`
@@ -240,6 +339,7 @@ app.get('/', (req, res) => {
     .nav-menu { display: flex; gap: 15px; align-items: center; list-style: none; }
     .nav-item { color: white; cursor: pointer; font-size: 14px; transition: all 0.3s; padding: 8px 12px; border-radius: 6px; }
     .nav-item:hover { background: rgba(255,255,255,0.2); }
+    .nav-item.admin { background: rgba(255, 107, 107, 0.3); }
     .user-info { color: white; font-size: 14px; font-weight: 600; }
     .cart-badge { background: #ff6b6b; color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; }
     
@@ -256,7 +356,7 @@ app.get('/', (req, res) => {
     
     .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
     
-    .product-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s; cursor: pointer; }
+    .product-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s; }
     .product-card:hover { transform: translateY(-8px); box-shadow: 0 12px 24px rgba(0,0,0,0.15); }
     
     .product-image { font-size: 80px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); height: 200px; }
@@ -285,17 +385,11 @@ app.get('/', (req, res) => {
     .toggle-form { text-align: center; margin-top: 15px; font-size: 14px; }
     .toggle-form a { color: #667eea; cursor: pointer; text-decoration: underline; }
     
-    .order-item { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
-    .order-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
-    .order-id { font-weight: bold; color: #667eea; }
-    .order-date { font-size: 12px; color: #718096; }
-    .order-total { font-size: 18px; font-weight: bold; color: #2d3748; }
-    .order-status { display: inline-block; background: #c3fae8; color: #0f5132; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
-    .order-items { font-size: 13px; color: #718096; margin-top: 10px; }
-    
-    .cart-icon { position: fixed; bottom: 30px; right: 30px; background: #ff6b6b; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4); transition: all 0.3s; }
-    .cart-icon:hover { transform: scale(1.1); }
-    .cart-count { position: absolute; top: -5px; right: -5px; background: #fff; color: #ff6b6b; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; }
+    .admin-dashboard { background: white; border-radius: 12px; padding: 30px; }
+    .admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; text-align: center; }
+    .stat-value { font-size: 32px; font-weight: bold; }
+    .stat-label { font-size: 14px; margin-top: 5px; opacity: 0.9; }
     
     .page { display: none; }
     .page.active { display: block; }
@@ -313,9 +407,11 @@ app.get('/', (req, res) => {
             <span class="user-info">👤 <span id="userName"></span></span>
           </li>
           <li id="ordersLink" style="display:none;" class="nav-item" onclick="showPage('orders')">📦 Orders</li>
+          <li id="adminLink" style="display:none;" class="nav-item admin" onclick="showPage('admin')">⚙️ Admin</li>
           <li id="signOutLink" style="display:none;" class="nav-item" onclick="signOut()">Sign Out</li>
           <li id="signInLink" class="nav-item" onclick="showSignIn()">Sign In</li>
           <li id="signUpLink" class="nav-item" onclick="showSignUp()">Sign Up</li>
+          <li id="adminLoginLink" class="nav-item admin" onclick="showAdminLogin()">🔐 Admin</li>
         </ul>
         <div class="cart-badge" onclick="viewCart()">🛒 <span id="cartCount">0</span></div>
       </div>
@@ -351,6 +447,37 @@ app.get('/', (req, res) => {
         <p>Track and manage your purchases</p>
       </div>
       <div id="ordersList"></div>
+    </div>
+  </div>
+
+  <!-- Admin Dashboard -->
+  <div id="admin" class="page">
+    <div class="container">
+      <div class="hero">
+        <h1>Admin Dashboard</h1>
+        <p>Manage your store</p>
+      </div>
+      <div class="admin-dashboard">
+        <div class="admin-stats">
+          <div class="stat-card">
+            <div class="stat-value" id="statProducts">0</div>
+            <div class="stat-label">Total Products</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statUsers">0</div>
+            <div class="stat-label">Total Users</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statOrders">0</div>
+            <div class="stat-label">Total Orders</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">$<span id="statRevenue">0</span></div>
+            <div class="stat-label">Total Revenue</div>
+          </div>
+        </div>
+        <button class="submit-btn" onclick="showAdminLogout()">Sign Out (Admin)</button>
+      </div>
     </div>
   </div>
 
@@ -398,6 +525,30 @@ app.get('/', (req, res) => {
     </div>
   </div>
 
+  <!-- Admin Login Modal -->
+  <div id="adminLoginModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal('adminLoginModal')">&times;</span>
+      <div class="modal-title">🔐 Admin Login</div>
+      <form onsubmit="handleAdminLogin(event)">
+        <div class="form-group">
+          <label>Admin Email</label>
+          <input type="email" id="adminEmail" required>
+        </div>
+        <div class="form-group">
+          <label>Admin Password</label>
+          <input type="password" id="adminPassword" required>
+        </div>
+        <button type="submit" class="submit-btn">Admin Login</button>
+      </form>
+      <div class="toggle-form" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+        <strong>Demo Credentials:</strong><br>
+        Email: admin@store.com<br>
+        Password: admin123
+      </div>
+    </div>
+  </div>
+
   <div class="cart-icon" onclick="viewCart()">
     🛒
     <div class="cart-count" id="cartBadge">0</div>
@@ -415,25 +566,42 @@ app.get('/', (req, res) => {
     let cartCount = 0;
     let currentUser = null;
     let currentSessionId = null;
+    let adminSessionId = null;
 
     function checkAuth() {
       const sessionId = localStorage.getItem('sessionId');
       const user = localStorage.getItem('user');
+      const adminSession = localStorage.getItem('adminSessionId');
       
       if (sessionId && user) {
         currentSessionId = sessionId;
         currentUser = JSON.parse(user);
-        updateAuthUI();
       }
+      
+      if (adminSession) {
+        adminSessionId = adminSession;
+      }
+      
+      updateAuthUI();
     }
 
     function updateAuthUI() {
-      if (currentUser) {
+      if (adminSessionId) {
+        document.getElementById('adminLoginLink').style.display = 'none';
+        document.getElementById('adminLink').style.display = 'block';
+        document.getElementById('signInLink').style.display = 'none';
+        document.getElementById('signUpLink').style.display = 'none';
+        document.getElementById('userSection').style.display = 'none';
+        document.getElementById('ordersLink').style.display = 'none';
+        document.getElementById('signOutLink').style.display = 'none';
+      } else if (currentUser) {
         document.getElementById('userSection').style.display = 'block';
         document.getElementById('ordersLink').style.display = 'block';
         document.getElementById('signOutLink').style.display = 'block';
         document.getElementById('signInLink').style.display = 'none';
         document.getElementById('signUpLink').style.display = 'none';
+        document.getElementById('adminLink').style.display = 'none';
+        document.getElementById('adminLoginLink').style.display = 'block';
         document.getElementById('userName').textContent = currentUser.name;
       } else {
         document.getElementById('userSection').style.display = 'none';
@@ -441,6 +609,8 @@ app.get('/', (req, res) => {
         document.getElementById('signOutLink').style.display = 'none';
         document.getElementById('signInLink').style.display = 'block';
         document.getElementById('signUpLink').style.display = 'block';
+        document.getElementById('adminLink').style.display = 'none';
+        document.getElementById('adminLoginLink').style.display = 'block';
       }
     }
 
@@ -455,8 +625,31 @@ app.get('/', (req, res) => {
           return;
         }
         loadOrders();
+      } else if (pageName === 'admin') {
+        if (!adminSessionId) {
+          alert('Please login as admin first');
+          showAdminLogin();
+          return;
+        }
+        loadAdminDashboard();
       } else if (pageName === 'home') {
         loadProducts();
+      }
+    }
+
+    async function loadAdminDashboard() {
+      try {
+        const response = await fetch('/api/admin/stats', {
+          headers: { 'x-admin-session': adminSessionId }
+        });
+        
+        const stats = await response.json();
+        document.getElementById('statProducts').textContent = stats.totalProducts;
+        document.getElementById('statUsers').textContent = stats.totalUsers;
+        document.getElementById('statOrders').textContent = stats.totalOrders;
+        document.getElementById('statRevenue').textContent = stats.totalRevenue;
+      } catch (err) {
+        console.error('Error loading admin dashboard:', err);
       }
     }
 
@@ -475,27 +668,70 @@ app.get('/', (req, res) => {
         }
         
         ordersList.innerHTML = userOrders.map(order => \`
-          <div class="order-item">
-            <div class="order-header">
+          <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
               <div>
-                <div class="order-id">Order #\${order.id.substr(0, 8)}</div>
-                <div class="order-date">\${new Date(order.date).toLocaleDateString()}</div>
+                <div style="font-weight: bold; color: #667eea;">Order #\${order.id.substr(0, 8)}</div>
+                <div style="font-size: 12px; color: #718096;">\${new Date(order.date).toLocaleDateString()}</div>
               </div>
               <div style="text-align: right;">
-                <div class="order-status">\${order.status}</div>
-                <div class="order-total">$\${order.total.toFixed(2)}</div>
+                <div style="background: #c3fae8; color: #0f5132; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; display: inline-block;">\${order.status}</div>
+                <div style="font-size: 18px; font-weight: bold; color: #2d3748;">$\${order.total.toFixed(2)}</div>
               </div>
             </div>
-            <div class="order-items">
+            <div style="font-size: 13px; color: #718096;">
               <strong>Items:</strong> \${order.items.map(i => \`\${i.productName} (x\${i.quantity})\`).join(', ')}
             </div>
-            <div class="order-items">
+            <div style="font-size: 13px; color: #718096;">
               <strong>Tracking:</strong> \${order.trackingNumber}
             </div>
           </div>
         \`).join('');
       } catch (err) {
         console.error('Error loading orders:', err);
+      }
+    }
+
+    async function handleAdminLogin(event) {
+      event.preventDefault();
+      const email = document.getElementById('adminEmail').value;
+      const password = document.getElementById('adminPassword').value;
+      
+      try {
+        const response = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          adminSessionId = data.adminSessionId;
+          localStorage.setItem('adminSessionId', adminSessionId);
+          updateAuthUI();
+          closeModal('adminLoginModal');
+          alert('✅ Admin login successful!');
+          showPage('admin');
+        } else {
+          alert('❌ ' + data.error);
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function showAdminLogin() {
+      document.getElementById('adminLoginModal').classList.add('active');
+    }
+
+    function showAdminLogout() {
+      if (confirm('Are you sure you want to sign out as admin?')) {
+        adminSessionId = null;
+        localStorage.removeItem('adminSessionId');
+        updateAuthUI();
+        showPage('home');
+        alert('✅ Admin signed out');
       }
     }
 
@@ -652,7 +888,7 @@ app.get('/', (req, res) => {
       if (cartCount === 0) {
         alert('Your cart is empty. Add some products first!');
       } else {
-        const proceed = confirm(\`You have \${cartCount} items in your cart ($\${(cartCount * 50).toFixed(2)}). Proceed to checkout?\`);
+        const proceed = confirm(\`You have \${cartCount} items in your cart. Proceed to checkout?\`);
         if (proceed) {
           checkout();
         }
@@ -690,4 +926,5 @@ app.get('/', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Premium Tech Store running on port ${PORT}`);
+  console.log(`📊 Admin Panel: Use email "admin@store.com" and password "admin123"`);
 });
