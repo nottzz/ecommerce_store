@@ -11,6 +11,7 @@ const stripe = new Stripe(STRIPE_KEY);
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // In-memory data store
 const products = [
@@ -38,6 +39,7 @@ const products = [
 
 const users = new Map();
 const carts = new Map();
+const sessions = new Map();
 
 // Health check
 app.get('/health', (req, res) => {
@@ -55,13 +57,77 @@ app.get('/api/products/:id', (req, res) => {
   res.json(product || { error: 'Not found' });
 });
 
-// Create user
-app.post('/api/users', (req, res) => {
-  const { email, name } = req.body;
+// Sign up
+app.post('/api/auth/signup', (req, res) => {
+  const { email, password, name } = req.body;
+  
+  if (!email || !password || !name) {
+    return res.status(400).json({ error: 'Missing fields' });
+  }
+  
+  const existingUser = Array.from(users.values()).find(u => u.email === email);
+  if (existingUser) {
+    return res.status(400).json({ error: 'Email already registered' });
+  }
+  
   const userId = uuidv4();
-  users.set(userId, { id: userId, email, name });
+  const sessionId = uuidv4();
+  
+  users.set(userId, { id: userId, email, password, name });
   carts.set(userId, []);
-  res.json({ id: userId, email, name });
+  sessions.set(sessionId, userId);
+  
+  res.json({ 
+    success: true, 
+    userId, 
+    sessionId, 
+    user: { id: userId, email, name }
+  });
+});
+
+// Sign in
+app.post('/api/auth/signin', (req, res) => {
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Missing fields' });
+  }
+  
+  const user = Array.from(users.values()).find(u => u.email === email && u.password === password);
+  
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+  
+  const sessionId = uuidv4();
+  sessions.set(sessionId, user.id);
+  
+  res.json({ 
+    success: true, 
+    userId: user.id, 
+    sessionId,
+    user: { id: user.id, email: user.email, name: user.name }
+  });
+});
+
+// Get current user
+app.get('/api/auth/me', (req, res) => {
+  const sessionId = req.headers['x-session-id'];
+  const userId = sessions.get(sessionId);
+  
+  if (!userId) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  const user = users.get(userId);
+  res.json({ id: user.id, email: user.email, name: user.name });
+});
+
+// Sign out
+app.post('/api/auth/signout', (req, res) => {
+  const sessionId = req.headers['x-session-id'];
+  sessions.delete(sessionId);
+  res.json({ success: true });
 });
 
 // Add to cart
@@ -111,6 +177,10 @@ app.get('/', (req, res) => {
     header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
     .header-content { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; }
     .logo { font-size: 28px; font-weight: bold; }
+    .header-right { display: flex; gap: 15px; align-items: center; }
+    .auth-btn { background: white; color: #667eea; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
+    .auth-btn:hover { transform: scale(1.05); }
+    .user-info { color: white; font-size: 14px; }
     .cart-badge { background: #ff6b6b; color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
     
     .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
@@ -141,6 +211,20 @@ app.get('/', (req, res) => {
     .add-btn { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
     .add-btn:hover { background: #764ba2; transform: scale(1.05); }
     
+    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .modal.active { display: flex; }
+    .modal-content { background: white; padding: 40px; border-radius: 12px; max-width: 400px; width: 90%; }
+    .modal-title { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
+    .form-group input { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; }
+    .form-group input:focus { outline: none; border-color: #667eea; }
+    .submit-btn { width: 100%; background: #667eea; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+    .submit-btn:hover { background: #764ba2; }
+    .close-btn { float: right; font-size: 24px; cursor: pointer; color: #999; }
+    .toggle-form { text-align: center; margin-top: 15px; font-size: 14px; }
+    .toggle-form a { color: #667eea; cursor: pointer; text-decoration: underline; }
+    
     .cart-icon { position: fixed; bottom: 30px; right: 30px; background: #ff6b6b; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4); transition: all 0.3s; }
     .cart-icon:hover { transform: scale(1.1); }
     .cart-count { position: absolute; top: -5px; right: -5px; background: #fff; color: #ff6b6b; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; }
@@ -156,7 +240,17 @@ app.get('/', (req, res) => {
   <header>
     <div class="header-content">
       <div class="logo">🛍️ Premium Tech Store</div>
-      <div class="cart-badge">🛒 <span id="cartCount">0</span> items</div>
+      <div class="header-right">
+        <div id="userSection" style="display:none;">
+          <span class="user-info">👤 <span id="userName"></span></span>
+          <button class="auth-btn" onclick="signOut()">Sign Out</button>
+        </div>
+        <div id="authSection">
+          <button class="auth-btn" onclick="showSignIn()">Sign In</button>
+          <button class="auth-btn" onclick="showSignUp()">Sign Up</button>
+        </div>
+        <div class="cart-badge">🛒 <span id="cartCount">0</span></div>
+      </div>
     </div>
   </header>
 
@@ -170,7 +264,7 @@ app.get('/', (req, res) => {
       <button class="filter-btn active" onclick="filterProducts('all')">All Products</button>
       <button class="filter-btn" onclick="filterProducts('Audio')">🎧 Audio</button>
       <button class="filter-btn" onclick="filterProducts('Wearables')">⌚ Wearables</button>
-      <button class="filter-btn" onclick="filterProducts('Input')">⌨️ Input Devices</button>
+      <button class="filter-btn" onclick="filterProducts('Input')">⌨️ Input</button>
       <button class="filter-btn" onclick="filterProducts('Power')">🔋 Power</button>
       <button class="filter-btn" onclick="filterProducts('Cables')">🔌 Cables</button>
     </div>
@@ -181,6 +275,50 @@ app.get('/', (req, res) => {
   <div class="cart-icon" onclick="viewCart()">
     🛒
     <div class="cart-count" id="cartBadge">0</div>
+  </div>
+
+  <!-- Sign In Modal -->
+  <div id="signInModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal('signInModal')">&times;</span>
+      <div class="modal-title">Sign In</div>
+      <form onsubmit="handleSignIn(event)">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="signInEmail" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="signInPassword" required>
+        </div>
+        <button type="submit" class="submit-btn">Sign In</button>
+      </form>
+      <div class="toggle-form">Don't have an account? <a onclick="switchToSignUp()">Sign Up</a></div>
+    </div>
+  </div>
+
+  <!-- Sign Up Modal -->
+  <div id="signUpModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal('signUpModal')">&times;</span>
+      <div class="modal-title">Create Account</div>
+      <form onsubmit="handleSignUp(event)">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="signUpName" required>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="signUpEmail" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="signUpPassword" required>
+        </div>
+        <button type="submit" class="submit-btn">Create Account</button>
+      </form>
+      <div class="toggle-form">Already have an account? <a onclick="switchToSignIn()">Sign In</a></div>
+    </div>
   </div>
 
   <footer>
@@ -199,6 +337,123 @@ app.get('/', (req, res) => {
     let allProducts = [];
     let currentFilter = 'all';
     let cartCount = 0;
+    let currentUser = null;
+    let currentSessionId = null;
+
+    // Check if user is logged in
+    function checkAuth() {
+      const sessionId = localStorage.getItem('sessionId');
+      const user = localStorage.getItem('user');
+      
+      if (sessionId && user) {
+        currentSessionId = sessionId;
+        currentUser = JSON.parse(user);
+        updateAuthUI();
+      }
+    }
+
+    function updateAuthUI() {
+      if (currentUser) {
+        document.getElementById('authSection').style.display = 'none';
+        document.getElementById('userSection').style.display = 'flex';
+        document.getElementById('userName').textContent = currentUser.name;
+      } else {
+        document.getElementById('authSection').style.display = 'flex';
+        document.getElementById('userSection').style.display = 'none';
+      }
+    }
+
+    async function handleSignIn(event) {
+      event.preventDefault();
+      const email = document.getElementById('signInEmail').value;
+      const password = document.getElementById('signInPassword').value;
+      
+      try {
+        const response = await fetch('/api/auth/signin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          currentUser = data.user;
+          currentSessionId = data.sessionId;
+          localStorage.setItem('sessionId', data.sessionId);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          updateAuthUI();
+          closeModal('signInModal');
+          alert('✅ Signed in successfully!');
+        } else {
+          alert('❌ ' + data.error);
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function handleSignUp(event) {
+      event.preventDefault();
+      const name = document.getElementById('signUpName').value;
+      const email = document.getElementById('signUpEmail').value;
+      const password = document.getElementById('signUpPassword').value;
+      
+      try {
+        const response = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          currentUser = data.user;
+          currentSessionId = data.sessionId;
+          localStorage.setItem('sessionId', data.sessionId);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          updateAuthUI();
+          closeModal('signUpModal');
+          alert('✅ Account created successfully!');
+        } else {
+          alert('❌ ' + data.error);
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function signOut() {
+      localStorage.removeItem('sessionId');
+      localStorage.removeItem('user');
+      currentUser = null;
+      currentSessionId = null;
+      updateAuthUI();
+      alert('✅ Signed out successfully!');
+    }
+
+    function showSignIn() {
+      document.getElementById('signInModal').classList.add('active');
+    }
+
+    function showSignUp() {
+      document.getElementById('signUpModal').classList.add('active');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+    }
+
+    function switchToSignIn() {
+      closeModal('signUpModal');
+      showSignIn();
+    }
+
+    function switchToSignUp() {
+      closeModal('signInModal');
+      showSignUp();
+    }
 
     async function loadProducts() {
       try {
@@ -240,6 +495,11 @@ app.get('/', (req, res) => {
     }
 
     function addToCart(productId, name, price) {
+      if (!currentUser) {
+        alert('Please sign in first to add items to cart');
+        showSignIn();
+        return;
+      }
       cartCount++;
       document.getElementById('cartCount').textContent = cartCount;
       document.getElementById('cartBadge').textContent = cartCount;
@@ -247,6 +507,11 @@ app.get('/', (req, res) => {
     }
 
     function viewCart() {
+      if (!currentUser) {
+        alert('Please sign in first');
+        showSignIn();
+        return;
+      }
       if (cartCount === 0) {
         alert('Your cart is empty. Add some products first!');
       } else {
@@ -254,6 +519,7 @@ app.get('/', (req, res) => {
       }
     }
 
+    checkAuth();
     loadProducts();
   </script>
 </body>
