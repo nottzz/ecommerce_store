@@ -541,11 +541,7 @@ app.get('/', (req, res) => {
         </div>
         <button type="submit" class="submit-btn">Admin Login</button>
       </form>
-      <div class="toggle-form" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-        <strong>Demo Credentials:</strong><br>
-        Email: admin@store.com<br>
-        Password: admin123
-      </div>
+
     </div>
   </div>
 
